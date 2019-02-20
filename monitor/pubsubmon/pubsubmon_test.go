@@ -55,6 +55,10 @@ func (mf *metricFactory) count() int {
 	return mf.counter
 }
 
+func peers(ctx context.Context) ([]peer.ID, error) {
+	return []peer.ID{test.TestPeerID1, test.TestPeerID2, test.TestPeerID3}, nil
+}
+
 func testPeerMonitor(t *testing.T) (*Monitor, func()) {
 	ctx := context.Background()
 	h, err := libp2p.New(
@@ -69,7 +73,7 @@ func testPeerMonitor(t *testing.T) (*Monitor, func()) {
 	cfg := &Config{}
 	cfg.Default()
 	cfg.CheckInterval = 2 * time.Second
-	mon, err := New(h, cfg)
+	mon, err := New(h, cfg, peers)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,8 +286,8 @@ func TestPeerMonitorAlerts(t *testing.T) {
 	time.Sleep(time.Second)
 	timeout := time.NewTimer(time.Second * 5)
 
-	// it should alert twice at least. Alert re-occurrs.
-	for i := 0; i < 2; i++ {
+	// it should alert once.
+	for i := 0; i < 1; i++ {
 		select {
 		case <-timeout.C:
 			t.Fatal("should have thrown an alert by now")

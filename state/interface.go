@@ -20,17 +20,23 @@ type State interface {
 	// Rm removes a pin from the State
 	Rm(context.Context, cid.Cid) error
 	// List lists all the pins in the state
-	List(context.Context) []*api.Pin
+	List(context.Context) ([]*api.Pin, error)
 	// Has returns true if the state is holding information for a Cid
 	Has(context.Context, cid.Cid) bool
 	// Get returns the information attacthed to this pin
 	Get(context.Context, cid.Cid) (*api.Pin, bool)
 	// Migrate restores the serialized format of an outdated state to the current version
 	Migrate(ctx context.Context, r io.Reader) error
-	// Return the version of this state
-	GetVersion() int
 	// Marshal serializes the state to a byte slice
 	Marshal(io.Writer) error
 	// Unmarshal deserializes the state from marshaled bytes
 	Unmarshal(io.Reader) error
+	// Commit writes any batched operations.
+}
+
+// BatchedState represents a state which batches write operations.
+type BatchingState interface {
+	State
+	// Commit writes any batched operations
+	Commit(context.Context) error
 }

@@ -38,6 +38,7 @@ type Monitor struct {
 	host         host.Host
 	pubsub       *pubsub.PubSub
 	subscription *pubsub.Subscription
+	peers        PeersFunc
 
 	metrics *metrics.Store
 	checker *metrics.Checker
@@ -49,8 +50,18 @@ type Monitor struct {
 	wg           sync.WaitGroup
 }
 
-// New creates a new PubSub monitor, using the given host and config.
-func New(h host.Host, cfg *Config) (*Monitor, error) {
+// PeersFunc allows the Monitor to filter and discard metrics
+// that do not belong to a given peerset.
+type PeersFunc func(context.Context) ([]peer.ID, error)
+
+// New creates a new PubSub monitor, using the given host, config and
+// PeersFunc. The PeersFunc can be nil. In this case, no metric filtering is
+// done based on peers (any peer is considered part of the peerset).
+func New(
+	h host.Host,
+	cfg *Config,
+	peers PeersFunc,
+) (*Monitor, error) {
 	err := cfg.Validate()
 	if err != nil {
 		return nil, err
@@ -81,6 +92,7 @@ func New(h host.Host, cfg *Config) (*Monitor, error) {
 		host:         h,
 		pubsub:       pubsub,
 		subscription: subscription,
+		peers:        peers,
 
 		metrics: mtrs,
 		checker: checker,
@@ -95,7 +107,7 @@ func (mon *Monitor) run() {
 	select {
 	case <-mon.rpcReady:
 		go mon.logFromPubsub()
-		go mon.checker.Watch(mon.ctx, mon.getPeers, mon.config.CheckInterval)
+		go mon.checker.Watch(mon.ctx, mon.peers, mon.config.CheckInterval)
 	case <-mon.ctx.Done():
 	}
 }
@@ -213,36 +225,21 @@ func (mon *Monitor) PublishMetric(ctx context.Context, m *api.Metric) error {
 	return nil
 }
 
-// getPeers gets the current list of peers from the consensus component
-func (mon *Monitor) getPeers(ctx context.Context) ([]peer.ID, error) {
-	ctx, span := trace.StartSpan(ctx, "monitor/pubsub/getPeers")
-	defer span.End()
-
-	var peers []peer.ID
-	err := mon.rpcClient.CallContext(
-		ctx,
-		"",
-		"Cluster",
-		"ConsensusPeers",
-		struct{}{},
-		&peers,
-	)
-	if err != nil {
-		logger.Error(err)
-	}
-	return peers, err
-}
-
 // LatestMetrics returns last known VALID metrics of a given type. A metric
-// is only valid if it has not expired and belongs to a current cluster peers.
+// is only valid if it has not expired and belongs to a current cluster peer.
 func (mon *Monitor) LatestMetrics(ctx context.Context, name string) []*api.Metric {
 	ctx, span := trace.StartSpan(ctx, "monitor/pubsub/LatestMetrics")
 	defer span.End()
 
-	latest := mon.metrics.Latest(name)
+	latest := mon.metrics.LatestValid(name)
 
-	// Make sure we only return metrics in the current peerset
-	peers, err := mon.getPeers(ctx)
+	if mon.peers == nil {
+		return latest
+	}
+
+	// Make sure we only return metrics in the current peerset if we have
+	// a peerset provider.
+	peers, err := mon.peers(ctx)
 	if err != nil {
 		return []*api.Metric{}
 	}

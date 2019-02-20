@@ -14,7 +14,6 @@ import (
 	"github.com/ipfs/ipfs-cluster/api"
 	"github.com/ipfs/ipfs-cluster/pstoremgr"
 	"github.com/ipfs/ipfs-cluster/rpcutil"
-	"github.com/ipfs/ipfs-cluster/state"
 	"github.com/ipfs/ipfs-cluster/version"
 
 	ocgorpc "github.com/lanzafame/go-libp2p-ocgorpc"
@@ -55,7 +54,6 @@ type Cluster struct {
 	consensus Consensus
 	apis      []API
 	ipfs      IPFSConnector
-	state     state.State
 	tracker   PinTracker
 	monitor   PeerMonitor
 	allocator PinAllocator
@@ -88,7 +86,6 @@ func NewCluster(
 	consensus Consensus,
 	apis []API,
 	ipfs IPFSConnector,
-	st state.State,
 	tracker PinTracker,
 	monitor PeerMonitor,
 	allocator PinAllocator,
@@ -142,7 +139,6 @@ func NewCluster(
 		consensus:   consensus,
 		apis:        apis,
 		ipfs:        ipfs,
-		state:       st,
 		tracker:     tracker,
 		monitor:     monitor,
 		allocator:   allocator,
@@ -378,7 +374,11 @@ func (c *Cluster) repinFromPeer(ctx context.Context, p peer.ID) {
 		logger.Warning(err)
 		return
 	}
-	list := cState.List(ctx)
+	list, err := cState.List(ctx)
+	if err != nil {
+		logger.Warning(err)
+		return
+	}
 	for _, pin := range list {
 		if containsPeer(pin.Allocations, p) {
 			_, ok, err := c.pin(ctx, pin, []peer.ID{p}, []peer.ID{}) // pin blacklisting this peer
@@ -512,7 +512,8 @@ func (c *Cluster) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	// We left the cluster or were removed. Destroy the Raft state.
+	// We left the cluster or were removed. Remove any consensus-specific
+	// state.
 	if c.removed && c.readyB {
 		err := c.consensus.Clean(ctx)
 		if err != nil {
@@ -775,7 +776,10 @@ func (c *Cluster) StateSync(ctx context.Context) error {
 	}
 
 	logger.Debug("syncing state to tracker")
-	clusterPins := cState.List(ctx)
+	clusterPins, err := cState.List(ctx)
+	if err != nil {
+		return err
+	}
 
 	trackedPins := c.tracker.StatusAll(ctx)
 	trackedPinsMap := make(map[string]int)
@@ -970,7 +974,7 @@ func (c *Cluster) RecoverLocal(ctx context.Context, h cid.Cid) (pInfo *api.PinIn
 // of the current global state. This is the source of truth as to which
 // pins are managed and their allocation, but does not indicate if
 // the item is successfully pinned. For that, use StatusAll().
-func (c *Cluster) Pins(ctx context.Context) []*api.Pin {
+func (c *Cluster) Pins(ctx context.Context) ([]*api.Pin, error) {
 	_, span := trace.StartSpan(ctx, "cluster/Pins")
 	defer span.End()
 	ctx = trace.NewContext(c.ctx, span)
@@ -978,7 +982,7 @@ func (c *Cluster) Pins(ctx context.Context) []*api.Pin {
 	cState, err := c.consensus.State(ctx)
 	if err != nil {
 		logger.Error(err)
-		return []*api.Pin{}
+		return nil, err
 	}
 	return cState.List(ctx)
 }
@@ -1144,9 +1148,9 @@ func (c *Cluster) pin(ctx context.Context, pin *api.Pin, blacklist []peer.ID, pr
 	}
 
 	if len(pin.Allocations) == 0 {
-		logger.Infof("IPFS cluster pinning %s everywhere:", pin.Cid)
+		logger.Infof("pinning %s everywhere:", pin.Cid)
 	} else {
-		logger.Infof("IPFS cluster pinning %s on %s:", pin.Cid, pin.Allocations)
+		logger.Infof("pinning %s on %s:", pin.Cid, pin.Allocations)
 	}
 
 	return pin, true, c.consensus.LogPin(ctx, pin)
