@@ -7,7 +7,7 @@ import (
 )
 
 // New returns a new thread-safe in-memory go-datastore.
-func New() ds.Datastore {
+func New() ds.ThreadSafeDatastore {
 	mapDs := ds.NewMapDatastore()
 	return sync.MutexWrap(mapDs)
 }
