@@ -14,7 +14,6 @@ import (
 
 	logging "github.com/ipfs/go-log"
 	rpc "github.com/libp2p/go-libp2p-gorpc"
-	host "github.com/libp2p/go-libp2p-host"
 	peer "github.com/libp2p/go-libp2p-peer"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	msgpack "github.com/multiformats/go-multicodec/msgpack"
@@ -35,7 +34,6 @@ type Monitor struct {
 	rpcClient *rpc.Client
 	rpcReady  chan struct{}
 
-	host         host.Host
 	pubsub       *pubsub.PubSub
 	subscription *pubsub.Subscription
 	peers        PeersFunc
@@ -58,8 +56,8 @@ type PeersFunc func(context.Context) ([]peer.ID, error)
 // PeersFunc. The PeersFunc can be nil. In this case, no metric filtering is
 // done based on peers (any peer is considered part of the peerset).
 func New(
-	h host.Host,
 	cfg *Config,
+	psub *pubsub.PubSub,
 	peers PeersFunc,
 ) (*Monitor, error) {
 	err := cfg.Validate()
@@ -72,13 +70,7 @@ func New(
 	mtrs := metrics.NewStore()
 	checker := metrics.NewChecker(mtrs)
 
-	pubsub, err := pubsub.NewGossipSub(ctx, h)
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-
-	subscription, err := pubsub.Subscribe(PubsubTopic)
+	subscription, err := psub.Subscribe(PubsubTopic)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -89,8 +81,7 @@ func New(
 		cancel:   cancel,
 		rpcReady: make(chan struct{}, 1),
 
-		host:         h,
-		pubsub:       pubsub,
+		pubsub:       psub,
 		subscription: subscription,
 		peers:        peers,
 

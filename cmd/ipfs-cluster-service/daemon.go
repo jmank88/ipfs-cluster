@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"time"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+
 	ipfscluster "github.com/ipfs/ipfs-cluster"
 	"github.com/ipfs/ipfs-cluster/allocator/ascendalloc"
 	"github.com/ipfs/ipfs-cluster/allocator/descendalloc"
@@ -97,7 +99,7 @@ func createCluster(
 	cfgs *cfgs,
 	raftStaging bool,
 ) (*ipfscluster.Cluster, error) {
-	host, err := ipfscluster.NewClusterHost(ctx, cfgs.clusterCfg)
+	host, pubsub, dht, err := ipfscluster.NewClusterHost(ctx, cfgs.clusterCfg)
 	checkErr("creating libP2P Host", err)
 
 	peerstoreMgr := pstoremgr.New(host, cfgs.clusterCfg.GetPeerstorePath())
@@ -119,6 +121,7 @@ func createCluster(
 	cons := setupConsensus(
 		c.String("consensus"),
 		host,
+		pubsub,
 		cfgs,
 		store,
 		raftStaging,
@@ -139,7 +142,7 @@ func createCluster(
 
 	mon := setupMonitor(
 		c.String("monitor"),
-		host,
+		pubsub,
 		cfgs.monCfg,
 		cfgs.pubsubmonCfg,
 		peersF,
@@ -161,6 +164,7 @@ func createCluster(
 
 	return ipfscluster.NewCluster(
 		host,
+		dht,
 		cfgs.clusterCfg,
 		cons,
 		apis,
@@ -258,7 +262,7 @@ func setupAllocation(
 
 func setupMonitor(
 	name string,
-	h host.Host,
+	pubsub *pubsub.PubSub,
 	basicCfg *basic.Config,
 	pubsubCfg *pubsubmon.Config,
 	peers func(ctx context.Context) ([]peer.ID, error),
@@ -270,7 +274,7 @@ func setupMonitor(
 		logger.Debug("basic monitor loaded")
 		return mon
 	case "pubsub":
-		mon, err := pubsubmon.New(h, pubsubCfg, peers)
+		mon, err := pubsubmon.New(pubsubCfg, pubsub, peers)
 		checkErr("creating monitor", err)
 		logger.Debug("pubsub monitor loaded")
 		return mon
@@ -318,6 +322,7 @@ func setupDatastore(
 func setupConsensus(
 	name string,
 	h host.Host,
+	pubsub *pubsub.PubSub,
 	cfgs *cfgs,
 	store ds.ThreadSafeDatastore,
 	raftStaging bool,
@@ -335,6 +340,7 @@ func setupConsensus(
 	case "crdt":
 		convrdt, err := crdt.New(
 			h,
+			pubsub,
 			cfgs.crdtCfg,
 			store,
 		)

@@ -48,6 +48,7 @@ type Consensus struct {
 
 func New(
 	host host.Host,
+	pubsub *pubsub.PubSub,
 	cfg *Config,
 	store ds.ThreadSafeDatastore,
 ) (*Consensus, error) {
@@ -57,15 +58,6 @@ func New(
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	gossip, err := pubsub.NewGossipSub(
-		ctx,
-		host,
-		pubsub.WithMessageSigning(true),
-		pubsub.WithStrictSignatureVerification(true),
-	)
-	if err != nil {
-		return nil, err
-	}
 
 	css := &Consensus{
 		ctx:       ctx,
@@ -74,7 +66,7 @@ func New(
 		host:      host,
 		store:     store,
 		namespace: ds.NewKey(cfg.DatastoreNamespace),
-		pubsub:    gossip,
+		pubsub:    pubsub,
 		rpcReady:  make(chan struct{}, 1),
 		readyCh:   make(chan struct{}, 1),
 	}

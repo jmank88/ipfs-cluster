@@ -25,7 +25,6 @@ import (
 	host "github.com/libp2p/go-libp2p-host"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 	peer "github.com/libp2p/go-libp2p-peer"
-	routedhost "github.com/libp2p/go-libp2p/p2p/host/routed"
 	ma "github.com/multiformats/go-multiaddr"
 )
 
@@ -82,6 +81,7 @@ type Cluster struct {
 // if you need to wait until the peer is fully up.
 func NewCluster(
 	host host.Host,
+	dht *dht.IpfsDHT,
 	cfg *Config,
 	consensus Consensus,
 	apis []API,
@@ -114,28 +114,13 @@ func NewCluster(
 	// in daemon.go.
 	peerManager := pstoremgr.New(host, cfg.GetPeerstorePath())
 
-	idht, err := dht.New(ctx, host)
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-
-	// Let the DHT be maintained regularly
-	err = idht.Bootstrap(ctx)
-	if err != nil {
-		cancel()
-		return nil, err
-	}
-
-	rHost := routedhost.Wrap(host, idht)
-
 	c := &Cluster{
 		ctx:         ctx,
 		cancel:      cancel,
 		id:          host.ID(),
 		config:      cfg,
-		host:        rHost,
-		dht:         idht,
+		host:        host,
+		dht:         dht,
 		consensus:   consensus,
 		apis:        apis,
 		ipfs:        ipfs,
