@@ -212,10 +212,6 @@ func TestClusterStateSync(t *testing.T) {
 	cl, _, _, _ := testingCluster(t)
 	defer cleanRaft()
 	defer cl.Shutdown(ctx)
-	err := cl.StateSync(ctx)
-	if err == nil {
-		t.Fatal("expected an error as there is no state to sync")
-	}
 
 	c := test.Cid1
 	err = cl.Pin(ctx, api.PinCid(c))
