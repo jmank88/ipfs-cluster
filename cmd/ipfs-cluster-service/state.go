@@ -151,15 +151,15 @@ func importState(r io.Reader, st state.State) error {
 	ctx := context.Background()
 	dec := json.NewDecoder(r)
 	for {
-		var pins api.PinSerial
-		err := dec.Decode(&pins)
+		var pin api.Pin
+		err := dec.Decode(&pin)
 		if err == io.EOF {
 			return nil
 		}
 		if err != nil {
 			return err
 		}
-		err = st.Add(ctx, pins.ToPin())
+		err = st.Add(ctx, &pin)
 		if err != nil {
 			return err
 		}
@@ -175,7 +175,7 @@ func exportState(w io.Writer, st state.State) error {
 	}
 	enc := json.NewEncoder(w)
 	for _, pin := range pins {
-		err := enc.Encode(pin.ToSerial())
+		err := enc.Encode(pin)
 		if err != nil {
 			return err
 		}

@@ -180,7 +180,7 @@ func (css *Consensus) Ready(ctx context.Context) <-chan struct{} {
 	return css.readyCh
 }
 
-func (css *Consensus) LogPin(ctx context.Context, pin api.Pin) error {
+func (css *Consensus) LogPin(ctx context.Context, pin *api.Pin) error {
 	err := css.state.Add(ctx, pin)
 	if err != nil {
 		return err
@@ -191,13 +191,13 @@ func (css *Consensus) LogPin(ctx context.Context, pin api.Pin) error {
 		"",
 		"Cluster",
 		"Track",
-		pin.ToSerial(),
+		pin,
 		&struct{}{},
 	)
 	return nil
 }
 
-func (css *Consensus) LogUnpin(ctx context.Context, pin api.Pin) error {
+func (css *Consensus) LogUnpin(ctx context.Context, pin *api.Pin) error {
 	err := css.state.Rm(ctx, pin.Cid)
 	if err != nil {
 		return err
@@ -208,7 +208,7 @@ func (css *Consensus) LogUnpin(ctx context.Context, pin api.Pin) error {
 		"",
 		"Cluster",
 		"Untrack",
-		pin.ToSerial(),
+		pin,
 		&struct{}{},
 	)
 }
@@ -217,7 +217,7 @@ func (css *Consensus) LogUnpin(ctx context.Context, pin api.Pin) error {
 // the monitor component and considers every peer with
 // valid known metrics a memeber.
 func (css *Consensus) Peers(ctx context.Context) ([]peer.ID, error) {
-	var metrics []api.Metric
+	var metrics []*api.Metric
 
 	err := css.rpcClient.CallContext(
 		ctx,

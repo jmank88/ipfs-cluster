@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	cid "github.com/ipfs/go-cid"
 	"github.com/ipfs/ipfs-cluster/api"
 	"github.com/ipfs/ipfs-cluster/datastore/inmem"
 	"github.com/ipfs/ipfs-cluster/state/dsstate"
@@ -52,7 +51,6 @@ func TestApplyToUnpin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, _ := cid.Decode(test.TestCid1)
 	st.Add(ctx, testPin(test.Cid1))
 	op.ApplyTo(st)
 	pins, err := st.List(ctx)

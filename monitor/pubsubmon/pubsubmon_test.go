@@ -58,7 +58,7 @@ func (mf *metricFactory) count() int {
 }
 
 func peers(ctx context.Context) ([]peer.ID, error) {
-	return []peer.ID{test.TestPeerID1, test.TestPeerID2, test.TestPeerID3}, nil
+	return []peer.ID{test.PeerID1, test.PeerID2, test.PeerID3}, nil
 }
 
 func testPeerMonitor(t *testing.T) (*Monitor, host.Host, func()) {

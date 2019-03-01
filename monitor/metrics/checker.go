@@ -60,7 +60,7 @@ func (mc Checker) CheckAll() error {
 	return nil
 }
 
-func (mc *Checker) alertIfExpired(metric api.Metric) error {
+func (mc *Checker) alertIfExpired(metric *api.Metric) error {
 	if !metric.Expired() {
 		return nil
 	}

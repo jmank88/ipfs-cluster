@@ -24,7 +24,7 @@ func (ibs *rpcDAGSyncer) Get(ctx context.Context, c cid.Cid) (blockfmt.Block, er
 		"",
 		"Cluster",
 		"IPFSBlockGet",
-		api.PinCid(c).ToSerial(),
+		c,
 		&blockBytes,
 	)
 	if err != nil {
@@ -36,7 +36,7 @@ func (ibs *rpcDAGSyncer) Get(ctx context.Context, c cid.Cid) (blockfmt.Block, er
 
 func (ibs *rpcDAGSyncer) Put(ctx context.Context, b blockfmt.Block) error {
 	data := b.RawData()
-	nwm := api.NodeWithMeta{
+	nwm := &api.NodeWithMeta{
 		Data:   data,
 		Format: "protobuf",
 	}
@@ -66,7 +66,7 @@ func (ipfsc *ipfsConnDAGSyncer) Get(ctx context.Context, c cid.Cid) (blockfmt.Bl
 
 func (ipfsc *ipfsConnDAGSyncer) Put(ctx context.Context, b blockfmt.Block) error {
 	data := b.RawData()
-	nwm := api.NodeWithMeta{
+	nwm := &api.NodeWithMeta{
 		Data:   data,
 		Format: "protobuf",
 	}

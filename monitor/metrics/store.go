@@ -71,11 +71,11 @@ func (mtrs *Store) LatestValid(name string) []*api.Metric {
 
 // AllMetrics returns the latest metrics for all peers and metrics types.  It
 // may return expired metrics.
-func (mtrs *Store) AllMetrics() []api.Metric {
+func (mtrs *Store) AllMetrics() []*api.Metric {
 	mtrs.mux.RLock()
 	defer mtrs.mux.RUnlock()
 
-	result := make([]api.Metric, 0)
+	result := make([]*api.Metric, 0)
 
 	for _, byPeer := range mtrs.byName {
 		for _, window := range byPeer {
