@@ -93,6 +93,7 @@ func (cfg *Config) toJSONConfig() *jsonConfig {
 	}
 }
 
+// GetFolder returns the BadgerDB folder.
 func (cfg *Config) GetFolder() string {
 	if cfg.Folder == "" {
 		return filepath.Join(cfg.BaseDir, DefaultSubFolder)

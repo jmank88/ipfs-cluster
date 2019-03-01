@@ -259,10 +259,9 @@ func (st *State) deserializePin(c cid.Cid, buf []byte) (*api.Pin, error) {
 	return p, err
 }
 
-// State implements the IPFS Cluster "state" interface by wrapping a batching
-// go-datastore and choosing how api.Pin objects are stored in it. It also
-// provides serialization methods for the whole state which are
-// datastore-independent.
+// BatchingState implements the IPFS Cluster "state" interface by wrapping a
+// batching go-datastore. All writes are batched and only written disk
+// when Commit() is called.
 type BatchingState struct {
 	*State
 	batch ds.Batch
@@ -298,7 +297,7 @@ func NewBatching(dstore ds.Batching, namespace string, handle codec.Handle) (*Ba
 	return bst, nil
 }
 
-// Commit commits batched write operations.
+// Commit persists the batched write operations.
 func (bst *BatchingState) Commit(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "state/dsstate/Commit")
 	defer span.End()

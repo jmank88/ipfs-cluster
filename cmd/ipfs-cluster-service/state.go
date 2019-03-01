@@ -164,7 +164,6 @@ func importState(r io.Reader, st state.State) error {
 			return err
 		}
 	}
-	return nil
 }
 
 // ExportState saves a json representation of a state

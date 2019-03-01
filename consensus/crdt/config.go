@@ -12,12 +12,14 @@ import (
 var configKey = "crdt"
 var envConfigKey = "cluster_crdt"
 
+// Default configuration values
 var (
 	DefaultClusterName        = "ipfs-cluster"
 	DefaultPeersetMetric      = "ping"
 	DefaultDatastoreNamespace = "/crdt"
 )
 
+// Config is the configuration object for Consensus.
 type Config struct {
 	config.Saver
 
@@ -43,10 +45,12 @@ type jsonConfig struct {
 	DatastoreNamespace string `json:"datastore_namespace,omitempty"`
 }
 
+// ConfigKey returns the section name for this type of configuration.
 func (cfg *Config) ConfigKey() string {
 	return configKey
 }
 
+// Validate returns an error if the configuration has invalid values.
 func (cfg *Config) Validate() error {
 	if cfg.ClusterName == "" {
 		return errors.New("crdt.cluster_name cannot be empty")
@@ -59,6 +63,7 @@ func (cfg *Config) Validate() error {
 	return nil
 }
 
+// LoadJSON takes a raw JSON slice and sets all the configuration fields.
 func (cfg *Config) LoadJSON(raw []byte) error {
 	jcfg := &jsonConfig{}
 	err := json.Unmarshal(raw, jcfg)
@@ -78,6 +83,7 @@ func (cfg *Config) applyJSONConfig(jcfg *jsonConfig) error {
 	return cfg.Validate()
 }
 
+// ToJSON returns the JSON representation of this configuration.
 func (cfg *Config) ToJSON() ([]byte, error) {
 	jcfg := cfg.toJSONConfig()
 
@@ -102,6 +108,7 @@ func (cfg *Config) toJSONConfig() *jsonConfig {
 	return jcfg
 }
 
+// Default sets the configuration fields to their default values.
 func (cfg *Config) Default() error {
 	cfg.ClusterName = DefaultClusterName
 	cfg.PeersetMetric = DefaultPeersetMetric

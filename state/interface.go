@@ -34,7 +34,7 @@ type State interface {
 	// Commit writes any batched operations.
 }
 
-// BatchedState represents a state which batches write operations.
+// BatchingState represents a state which batches write operations.
 type BatchingState interface {
 	State
 	// Commit writes any batched operations

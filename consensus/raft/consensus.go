@@ -469,6 +469,7 @@ func (cc *Consensus) Leader(ctx context.Context) (peer.ID, error) {
 	return raftactor.Leader()
 }
 
+// Clean removes the Raft persisted state.
 func (cc *Consensus) Clean(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "consensus/Clean")
 	defer span.End()
@@ -530,6 +531,9 @@ func parsePIDFromMultiaddr(addr ma.Multiaddr) string {
 	return pidstr
 }
 
+// OfflineState state returns a cluster state by reading the Raft data and
+// writing it to the given datastore which is then wrapped as a state.State.
+// Usually an in-memory datastore suffices.
 func OfflineState(cfg *Config, store ds.ThreadSafeDatastore) (state.State, error) {
 	r, snapExists, err := LastStateRaw(cfg)
 	if err != nil {

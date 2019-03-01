@@ -2,7 +2,7 @@ package crdt
 
 import (
 	"context"
-	"io"
+	"errors"
 	"sync"
 
 	ipfscluster "github.com/ipfs/ipfs-cluster"
@@ -21,6 +21,14 @@ import (
 
 var logger = logging.Logger("crdt")
 
+// Common variables for the module.
+var (
+	ErrNoLeader = errors.New("crdt consensus component does not provide a leader")
+)
+
+// Consensus implement ipfscluster.Consensus and provides the facility to add
+// and remove pins from the Cluster shared state. It uses a CRDT-backed
+// implementation of go-datastore (go-ds-crdt).
 type Consensus struct {
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -46,6 +54,9 @@ type Consensus struct {
 	shutdown     bool
 }
 
+// New creates a new crdt Consensus component. The given PubSub will be used to
+// broadcast new heads. The given thread-safe datastore will be used to persist
+// data and all will be prefixed with cfg.DatastoreNamespace.
 func New(
 	host host.Host,
 	pubsub *pubsub.PubSub,
@@ -129,6 +140,7 @@ func (css *Consensus) setup() {
 	css.readyCh <- struct{}{}
 }
 
+// Shutdown closes this component, cancelling the pubsub subscription.
 func (css *Consensus) Shutdown(ctx context.Context) error {
 	css.shutdownLock.Lock()
 	defer css.shutdownLock.Unlock()
@@ -156,9 +168,7 @@ func (css *Consensus) Shutdown(ctx context.Context) error {
 		//
 		// Also, all datastores are io.Closer now, but this has not
 		// yet been bubbled.
-		if closer, ok := store.(io.Closer); ok {
-			closer.Close()
-		}
+		store.Close()
 	}
 
 	if css.config.hostShutdown {
@@ -171,15 +181,20 @@ func (css *Consensus) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+// SetClient gives the component the ability to communicate and
+// leaves it ready to use.
 func (css *Consensus) SetClient(c *rpc.Client) {
 	css.rpcClient = c
 	css.rpcReady <- struct{}{}
 }
 
+// Ready returns a channel which is signalled when the component
+// is ready to use.
 func (css *Consensus) Ready(ctx context.Context) <-chan struct{} {
 	return css.readyCh
 }
 
+// LogPin adds a new pin to the shared state.
 func (css *Consensus) LogPin(ctx context.Context, pin *api.Pin) error {
 	err := css.state.Add(ctx, pin)
 	if err != nil {
@@ -194,9 +209,9 @@ func (css *Consensus) LogPin(ctx context.Context, pin *api.Pin) error {
 		pin,
 		&struct{}{},
 	)
-	return nil
 }
 
+// LogUnpin removes a pin from the shared state.
 func (css *Consensus) LogUnpin(ctx context.Context, pin *api.Pin) error {
 	err := css.state.Rm(ctx, pin.Cid)
 	if err != nil {
@@ -239,24 +254,31 @@ func (css *Consensus) Peers(ctx context.Context) ([]peer.ID, error) {
 	return peers, nil
 }
 
+// WaitForSync is a no-op as it is not necessary to be fully synced for the
+// component to be usable.
 func (css *Consensus) WaitForSync(ctx context.Context) error { return nil }
 
+// AddPeer is a no-op as we do not need to do peerset management with Merkle-CRDTs.
 func (css *Consensus) AddPeer(ctx context.Context, pid peer.ID) error { return nil }
 
+// RmPeer is a no-op.
 func (css *Consensus) RmPeer(ctx context.Context, pid peer.ID) error { return nil }
 
+// State returns the cluster shared state.
 func (css *Consensus) State(ctx context.Context) (state.State, error) { return css.state, nil }
 
+// Clean is a no-op. FIXME: It should delete all keys under namespace.
 func (css *Consensus) Clean(context.Context) error { return nil }
 
-func (css *Consensus) Rollback(state state.State) error {
-	return nil
-}
+// Leader returns ErrNoLeader.
 func (css *Consensus) Leader(ctx context.Context) (peer.ID, error) {
-	return css.host.ID(), nil
+	return nil, ErrNoLeader
 }
 
-// OfflineState returns an offline, read-only state.
+// OfflineState returns an offline, read-only batching state using the given
+// datastore. Any writes to this state are processed through the given
+// ipfs connector (the state is offline as it does not require a
+// running cluster peer).
 func OfflineState(cfg *Config, store ds.ThreadSafeDatastore, ipfs ipfscluster.IPFSConnector) (state.BatchingState, error) {
 	opts := crdt.DefaultOptions()
 	opts.Logger = logger
