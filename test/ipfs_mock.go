@@ -206,7 +206,10 @@ func (m *IpfsMock) handler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			goto ERROR
 		}
-		ok = m.pinMap.Has(ctx, c)
+		ok, err = m.pinMap.Has(ctx, c)
+		if err != nil {
+			goto ERROR
+		}
 		if ok {
 			rMap := make(map[string]mockPinType)
 			rMap[cidStr] = mockPinType{"recursive"}

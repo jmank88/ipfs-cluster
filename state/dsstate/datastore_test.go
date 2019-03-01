@@ -40,7 +40,7 @@ func TestAdd(t *testing.T) {
 	ctx := context.Background()
 	st := newState(t)
 	st.Add(ctx, c)
-	if !st.Has(ctx, c.Cid) {
+	if ok, err := st.Has(ctx, c.Cid); !ok || err != nil {
 		t.Error("should have added it")
 	}
 }
@@ -50,7 +50,7 @@ func TestRm(t *testing.T) {
 	st := newState(t)
 	st.Add(ctx, c)
 	st.Rm(ctx, c.Cid)
-	if st.Has(ctx, c.Cid) {
+	if ok, err := st.Has(ctx, c.Cid); ok || err != nil {
 		t.Error("should have removed it")
 	}
 }
@@ -64,10 +64,15 @@ func TestGet(t *testing.T) {
 	}()
 	st := newState(t)
 	st.Add(ctx, c)
-	get, ok := st.Get(ctx, c.Cid)
-	if !ok {
+	get, err := st.Get(ctx, c.Cid)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if get == nil {
 		t.Fatal("not found")
 	}
+
 	if get.Cid.String() != c.Cid.String() {
 		t.Error("bad cid decoding: ", get.Cid)
 	}
@@ -118,8 +123,11 @@ func TestMarshalUnmarshal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	get, ok := st2.Get(ctx, c.Cid)
-	if !ok {
+	get, err := st2.Get(ctx, c.Cid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if get == nil {
 		t.Fatal("cannot get pin")
 	}
 	if get.Allocations[0] != testPeerID1 {

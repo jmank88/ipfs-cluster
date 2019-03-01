@@ -92,31 +92,31 @@ func (st *State) Rm(ctx context.Context, c cid.Cid) error {
 // Get returns a Pin from the store and whether it
 // was present. When not present, a default pin
 // is returned.
-func (st *State) Get(ctx context.Context, c cid.Cid) (*api.Pin, bool) {
+func (st *State) Get(ctx context.Context, c cid.Cid) (*api.Pin, error) {
 	_, span := trace.StartSpan(ctx, "state/dsstate/Get")
 	defer span.End()
 
 	v, err := st.dsRead.Get(st.key(c))
 	if err != nil {
-		return api.PinCid(c), false
+		return nil, err
 	}
 	p, err := st.deserializePin(c, v)
 	if err != nil {
-		return api.PinCid(c), false
+		return nil, err
 	}
-	return p, true
+	return p, nil
 }
 
 // Has returns whether a Cid is stored.
-func (st *State) Has(ctx context.Context, c cid.Cid) bool {
+func (st *State) Has(ctx context.Context, c cid.Cid) (bool, error) {
 	_, span := trace.StartSpan(ctx, "state/dsstate/Has")
 	defer span.End()
 
 	ok, err := st.dsRead.Has(st.key(c))
 	if err != nil {
-		logger.Error(err)
+		return false, err
 	}
-	return ok && err == nil
+	return ok, nil
 }
 
 // List returns the unsorted list of all Pins that have been added to the

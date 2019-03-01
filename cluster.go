@@ -786,11 +786,15 @@ func (c *Cluster) StateSync(ctx context.Context) error {
 	// c. Track items which should not be local as remote
 	for _, p := range trackedPins {
 		pCid := p.Cid
-		currentPin, has := cState.Get(ctx, pCid)
+		currentPin, err := cState.Get(ctx, pCid)
+		if err != nil {
+			return err
+		}
+
 		allocatedHere := containsPeer(currentPin.Allocations, c.id) || currentPin.ReplicationFactorMin == -1
 
 		switch {
-		case !has:
+		case currentPin == nil:
 			logger.Debugf("StateSync: Untracking %s, is not part of shared state", pCid)
 			c.tracker.Untrack(ctx, pCid)
 		case p.Status == api.TrackerStatusRemote && allocatedHere:
@@ -987,9 +991,12 @@ func (c *Cluster) PinGet(ctx context.Context, h cid.Cid) (*api.Pin, error) {
 	if err != nil {
 		return nil, err
 	}
-	pin, ok := st.Get(ctx, h)
-	if !ok {
-		return pin, errors.New("cid is not part of the global state")
+	pin, err := st.Get(ctx, h)
+	if err != nil {
+		return nil, err
+	}
+	if pin == nil {
+		return nil, errors.New("cid is not part of the global state")
 	}
 	return pin, nil
 }
@@ -1471,8 +1478,11 @@ func (c *Cluster) cidsFromMetaPin(ctx context.Context, h cid.Cid) ([]cid.Cid, er
 
 	list := []cid.Cid{h}
 
-	pin, ok := cState.Get(ctx, h)
-	if !ok {
+	pin, err := cState.Get(ctx, h)
+	if err != nil {
+		return nil, err
+	}
+	if pin == nil {
 		return list, nil
 	}
 

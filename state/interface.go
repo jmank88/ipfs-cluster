@@ -32,9 +32,10 @@ type ReadOnly interface {
 	// List lists all the pins in the state
 	List(context.Context) ([]*api.Pin, error)
 	// Has returns true if the state is holding information for a Cid
-	Has(context.Context, cid.Cid) bool
-	// Get returns the information attacthed to this pin
-	Get(context.Context, cid.Cid) (*api.Pin, bool)
+	Has(context.Context, cid.Cid) (bool, error)
+	// Get returns the information attacthed to this pin, if any. Otherwise
+	// it returns nil.
+	Get(context.Context, cid.Cid) (*api.Pin, error)
 }
 
 // WriteOnly represents the write side of a State.
