@@ -214,7 +214,7 @@ func TestClusterStateSync(t *testing.T) {
 	defer cl.Shutdown(ctx)
 
 	c := test.Cid1
-	err = cl.Pin(ctx, api.PinCid(c))
+	err := cl.Pin(ctx, api.PinCid(c))
 	if err != nil {
 		t.Fatal("pin should have worked:", err)
 	}
