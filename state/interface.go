@@ -12,19 +12,12 @@ import (
 	"github.com/ipfs/ipfs-cluster/api"
 )
 
-// State is used by the Consensus component to keep track of
-// objects which objects are pinned. This component should be thread safe.
+// State is a wrapper to the Cluster shared state so that Pin objects can
+// easily read, written and queried. The state can be marshaled and
+// unmarshaled. Implementation should be thread-safe.
 type State interface {
-	// Add adds a pin to the State
-	Add(context.Context, *api.Pin) error
-	// Rm removes a pin from the State
-	Rm(context.Context, cid.Cid) error
-	// List lists all the pins in the state
-	List(context.Context) ([]*api.Pin, error)
-	// Has returns true if the state is holding information for a Cid
-	Has(context.Context, cid.Cid) bool
-	// Get returns the information attacthed to this pin
-	Get(context.Context, cid.Cid) (*api.Pin, bool)
+	ReadOnly
+	WriteOnly
 	// Migrate restores the serialized format of an outdated state to the current version
 	Migrate(ctx context.Context, r io.Reader) error
 	// Marshal serializes the state to a byte slice
@@ -32,6 +25,24 @@ type State interface {
 	// Unmarshal deserializes the state from marshaled bytes
 	Unmarshal(io.Reader) error
 	// Commit writes any batched operations.
+}
+
+// ReadOnly represents a the read side of a State.
+type ReadOnly interface {
+	// List lists all the pins in the state
+	List(context.Context) ([]*api.Pin, error)
+	// Has returns true if the state is holding information for a Cid
+	Has(context.Context, cid.Cid) bool
+	// Get returns the information attacthed to this pin
+	Get(context.Context, cid.Cid) (*api.Pin, bool)
+}
+
+// WriteOnly represents the write side of a State.
+type WriteOnly interface {
+	// Add adds a pin to the State
+	Add(context.Context, *api.Pin) error
+	// Rm removes a pin from the State
+	Rm(context.Context, cid.Cid) error
 }
 
 // BatchingState represents a state which batches write operations.

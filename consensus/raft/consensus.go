@@ -439,11 +439,12 @@ func (cc *Consensus) RmPeer(ctx context.Context, pid peer.ID) error {
 	return finalErr
 }
 
-// State retrieves the current consensus State. It may error
-// if no State has been agreed upon or the state is not
-// consistent. The returned State is the last agreed-upon
-// State known by this node.
-func (cc *Consensus) State(ctx context.Context) (state.State, error) {
+// State retrieves the current consensus State. It may error if no State has
+// been agreed upon or the state is not consistent. The returned State is the
+// last agreed-upon State known by this node. No writes are allowed, as all
+// writes to the shared state should happen through the Consensus component
+// methods.
+func (cc *Consensus) State(ctx context.Context) (state.ReadOnly, error) {
 	ctx, span := trace.StartSpan(ctx, "consensus/State")
 	defer span.End()
 

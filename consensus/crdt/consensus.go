@@ -265,14 +265,14 @@ func (css *Consensus) AddPeer(ctx context.Context, pid peer.ID) error { return n
 func (css *Consensus) RmPeer(ctx context.Context, pid peer.ID) error { return nil }
 
 // State returns the cluster shared state.
-func (css *Consensus) State(ctx context.Context) (state.State, error) { return css.state, nil }
+func (css *Consensus) State(ctx context.Context) (state.ReadOnly, error) { return css.state, nil }
 
 // Clean is a no-op. FIXME: It should delete all keys under namespace.
 func (css *Consensus) Clean(context.Context) error { return nil }
 
 // Leader returns ErrNoLeader.
 func (css *Consensus) Leader(ctx context.Context) (peer.ID, error) {
-	return nil, ErrNoLeader
+	return "", ErrNoLeader
 }
 
 // OfflineState returns an offline, read-only batching state using the given
