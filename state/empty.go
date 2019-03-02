@@ -19,7 +19,7 @@ func (e *empty) Has(ctx context.Context, c cid.Cid) (bool, error) {
 }
 
 func (e *empty) Get(ctx context.Context, c cid.Cid) (*api.Pin, error) {
-	return nil, nil
+	return nil, ErrNotFound
 }
 
 // Empty returns an empty read-only state.

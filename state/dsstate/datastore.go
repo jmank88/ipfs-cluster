@@ -98,6 +98,9 @@ func (st *State) Get(ctx context.Context, c cid.Cid) (*api.Pin, error) {
 
 	v, err := st.dsRead.Get(st.key(c))
 	if err != nil {
+		if err == ds.ErrNotFound {
+			return nil, state.ErrNotFound
+		}
 		return nil, err
 	}
 	p, err := st.deserializePin(c, v)

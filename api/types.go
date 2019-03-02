@@ -697,6 +697,10 @@ func (pin *Pin) Equals(pin2 *Pin) bool {
 		return false
 	}
 
+	if pin == pin2 {
+		return true
+	}
+
 	if !pin.Cid.Equals(pin2.Cid) {
 		return false
 	}

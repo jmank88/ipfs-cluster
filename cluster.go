@@ -14,6 +14,7 @@ import (
 	"github.com/ipfs/ipfs-cluster/api"
 	"github.com/ipfs/ipfs-cluster/pstoremgr"
 	"github.com/ipfs/ipfs-cluster/rpcutil"
+	"github.com/ipfs/ipfs-cluster/state"
 	"github.com/ipfs/ipfs-cluster/version"
 
 	ocgorpc "github.com/lanzafame/go-libp2p-ocgorpc"
@@ -787,16 +788,19 @@ func (c *Cluster) StateSync(ctx context.Context) error {
 	for _, p := range trackedPins {
 		pCid := p.Cid
 		currentPin, err := cState.Get(ctx, pCid)
-		if err != nil {
+		if err != nil && err != state.ErrNotFound {
 			return err
+		}
+
+		if err == state.ErrNotFound {
+			logger.Debugf("StateSync: untracking %s: not part of shared state", pCid)
+			c.tracker.Untrack(ctx, pCid)
+			continue
 		}
 
 		allocatedHere := containsPeer(currentPin.Allocations, c.id) || currentPin.ReplicationFactorMin == -1
 
 		switch {
-		case currentPin == nil:
-			logger.Debugf("StateSync: Untracking %s, is not part of shared state", pCid)
-			c.tracker.Untrack(ctx, pCid)
 		case p.Status == api.TrackerStatusRemote && allocatedHere:
 			logger.Debugf("StateSync: Tracking %s locally (currently remote)", pCid)
 			c.tracker.Track(ctx, currentPin)
@@ -995,9 +999,6 @@ func (c *Cluster) PinGet(ctx context.Context, h cid.Cid) (*api.Pin, error) {
 	if err != nil {
 		return nil, err
 	}
-	if pin == nil {
-		return nil, errors.New("cid is not part of the global state")
-	}
 	return pin, nil
 }
 
@@ -1093,9 +1094,17 @@ func (c *Cluster) setupPin(ctx context.Context, pin *api.Pin) error {
 	}
 
 	existing, err := c.PinGet(ctx, pin.Cid)
-	if err == nil && existing.Type != pin.Type { // it exists
-		return fmt.Errorf("cannot repin CID with different tracking method, clear state with pin rm to proceed. New: %s. Was: %s", pin.Type, existing.Type)
+	if err != nil && err != state.ErrNotFound {
+		return err
 	}
+
+	if existing != nil && existing.Type != pin.Type {
+		msg := "cannot repin CID with different tracking method, "
+		msg += "clear state with pin rm to proceed. "
+		msg += "New: %s. Was: %s"
+		return fmt.Errorf(msg, pin.Type, existing.Type)
+	}
+
 	return checkPinType(pin)
 }
 
@@ -1133,6 +1142,7 @@ func (c *Cluster) pin(ctx context.Context, pin *api.Pin, blacklist []peer.ID, pr
 	}
 	pin.Allocations = allocs
 
+	// Equals can handle nil objects.
 	if curr, _ := c.PinGet(ctx, pin.Cid); curr.Equals(pin) {
 		// skip pinning
 		logger.Debugf("pinning %s skipped: already correctly allocated", pin.Cid)
@@ -1156,7 +1166,7 @@ func (c *Cluster) unpin(ctx context.Context, h cid.Cid) (*api.Pin, error) {
 	logger.Info("IPFS cluster unpinning:", h)
 	pin, err := c.PinGet(ctx, h)
 	if err != nil {
-		return pin, fmt.Errorf("cannot unpin pin uncommitted to state: %s", err)
+		return nil, err
 	}
 
 	switch pin.Type {
