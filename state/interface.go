@@ -13,6 +13,7 @@ import (
 	cid "github.com/ipfs/go-cid"
 )
 
+// ErrNotFound should be returned when a pin is not part of the state.
 var ErrNotFound = errors.New("pin is not part of the pinset")
 
 // State is a wrapper to the Cluster shared state so that Pin objects can
