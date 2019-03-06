@@ -144,7 +144,11 @@ func (crdtsm *crdtStateManager) ExportState(w io.Writer) error {
 }
 
 func (crdtsm *crdtStateManager) Clean() error {
-	return badger.Cleanup(crdtsm.cfgs.badgerCfg)
+	store, err := crdtsm.GetStore()
+	if err != nil {
+		return err
+	}
+	return crdt.Clean(context.Background(), crdtsm.cfgs.crdtCfg, store)
 }
 
 func importState(r io.Reader, st state.State) error {

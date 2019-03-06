@@ -11,6 +11,7 @@ import (
 	"github.com/ipfs/ipfs-cluster/state/dsstate"
 
 	ds "github.com/ipfs/go-datastore"
+	query "github.com/ipfs/go-datastore/query"
 	crdt "github.com/ipfs/go-ds-crdt"
 	logging "github.com/ipfs/go-log"
 	rpc "github.com/libp2p/go-libp2p-gorpc"
@@ -267,8 +268,38 @@ func (css *Consensus) RmPeer(ctx context.Context, pid peer.ID) error { return ni
 // State returns the cluster shared state.
 func (css *Consensus) State(ctx context.Context) (state.ReadOnly, error) { return css.state, nil }
 
-// Clean is a no-op. FIXME: It should delete all keys under namespace.
-func (css *Consensus) Clean(context.Context) error { return nil }
+// It should delete all keys under namespace.
+func (css *Consensus) Clean(ctx context.Context) error {
+	return Clean(ctx, css.config, css.store)
+}
+
+// Cleans removes all CRDT data from the permanent storage.
+func Clean(ctx context.Context, cfg *Config, store ds.Datastore) error {
+	logger.Info("cleaning all CRDT data from datastore")
+	q := query.Query{
+		Prefix:   cfg.DatastoreNamespace,
+		KeysOnly: true,
+	}
+
+	results, err := store.Query(q)
+	if err != nil {
+		return err
+	}
+	defer results.Close()
+
+	for r := range results.Next() {
+		if r.Error != nil {
+			return err
+		}
+		k := ds.NewKey(r.Key)
+		err := store.Delete(k)
+		if err != nil {
+			// do not die, continue cleaning
+			logger.Error(err)
+		}
+	}
+	return nil
+}
 
 // Leader returns ErrNoLeader.
 func (css *Consensus) Leader(ctx context.Context) (peer.ID, error) {
