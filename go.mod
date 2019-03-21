@@ -64,6 +64,7 @@ require (
 	go.opencensus.io v0.19.1
 	golang.org/x/sys v0.0.0-20190308023053-584f3b12f43e // indirect
 	golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2 // indirect
+	gonum.org/v1/gonum v0.0.0-20190321072728-ca4d35bc590a
 	google.golang.org/api v0.1.0 // indirect
 	google.golang.org/genproto v0.0.0-20190307195333-5fe7a883aa19 // indirect
 )
