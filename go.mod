@@ -1,6 +1,7 @@
 module github.com/ipfs/ipfs-cluster
 
 require (
+	cloud.google.com/go v0.37.2 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
@@ -61,9 +62,6 @@ require (
 	github.com/ugorji/go v0.0.0-20171015030454-f26fc641ec9d
 	github.com/urfave/cli v1.20.0
 	github.com/zenground0/go-dot v0.0.0-20180912213407-94a425d4984e
-	go.opencensus.io v0.19.1
+	go.opencensus.io v0.19.2
 	golang.org/x/sys v0.0.0-20190308023053-584f3b12f43e // indirect
-	golang.org/x/text v0.3.1-0.20180807135948-17ff2d5776d2 // indirect
-	google.golang.org/api v0.1.0 // indirect
-	google.golang.org/genproto v0.0.0-20190307195333-5fe7a883aa19 // indirect
 )

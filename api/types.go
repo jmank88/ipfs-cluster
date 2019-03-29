@@ -450,6 +450,7 @@ type PinOptions struct {
 	ShardSize            uint64            `json:"shard_size" codec:"s,omitempty"`
 	UserAllocations      []string          `json:"user_allocations" codec:"ua,omitempty"`
 	Metadata             map[string]string `json:"metadata" codec:"m,omitempty"`
+	Expire               int64             `json:"expire" codec:"ex,omitempty"`
 }
 
 // Equals returns true if two PinOption objects are equivalent.
@@ -489,6 +490,9 @@ func (po *PinOptions) Equals(po2 *PinOptions) bool {
 			return false
 		}
 	}
+	if po.Expire != po2.Expire {
+		return false
+	}
 	return true
 }
 
@@ -505,6 +509,9 @@ func (po *PinOptions) ToQuery() string {
 			continue
 		}
 		q.Set(fmt.Sprintf("%s%s", pinOptionsMetaPrefix, k), v)
+	}
+	if po.Expire != 0 {
+		q.Set("expire", fmt.Sprintf("%d", po.Expire))
 	}
 	return q.Encode()
 }
@@ -544,6 +551,9 @@ func (po *PinOptions) FromQuery(q url.Values) {
 			continue
 		}
 		po.Metadata[metaKey] = q.Get(k)
+	}
+	if expire, err := strconv.Atoi(q.Get("expire")); err == nil {
+		po.Expire = int64(expire)
 	}
 }
 
@@ -627,6 +637,7 @@ func (pin *Pin) ProtoMarshal() ([]byte, error) {
 		ShardSize:            pin.ShardSize,
 		// UserAllocations:      pin.UserAllocations,
 		Metadata: pin.Metadata,
+		Expire:   pin.Expire,
 	}
 
 	pbPin := &pb.Pin{
@@ -686,6 +697,7 @@ func (pin *Pin) ProtoUnmarshal(data []byte) error {
 	pin.ShardSize = opts.GetShardSize()
 	// pin.UserAllocations = opts.GetUserAllocations()
 	pin.Metadata = opts.GetMetadata()
+	pin.Expire = opts.GetExpire()
 	return nil
 }
 

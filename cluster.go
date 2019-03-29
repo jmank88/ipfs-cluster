@@ -213,7 +213,9 @@ func (c *Cluster) syncWatcher() {
 	defer span.End()
 
 	stateSyncTicker := time.NewTicker(c.config.StateSyncInterval)
+	defer stateSyncTicker.Stop()
 	syncTicker := time.NewTicker(c.config.IPFSSyncInterval)
+	defer syncTicker.Stop()
 
 	for {
 		select {
@@ -224,7 +226,6 @@ func (c *Cluster) syncWatcher() {
 			logger.Debug("auto-triggering SyncAllLocal()")
 			c.SyncAllLocal(ctx)
 		case <-c.ctx.Done():
-			stateSyncTicker.Stop()
 			return
 		}
 	}
@@ -795,6 +796,8 @@ func (c *Cluster) StateSync(ctx context.Context) error {
 	// a. Untrack items which should not be tracked
 	// b. Track items which should not be remote as local
 	// c. Track items which should not be local as remote
+	// d. Untrack items which expired
+	now := time.Now().Unix()
 	for _, p := range trackedPins {
 		pCid := p.Cid
 		currentPin, has := cState.Get(ctx, pCid)
@@ -810,6 +813,9 @@ func (c *Cluster) StateSync(ctx context.Context) error {
 		case p.Status == api.TrackerStatusPinned && !allocatedHere:
 			logger.Debugf("StateSync: Tracking %s as remote (currently local)", pCid)
 			c.tracker.Track(ctx, currentPin)
+		case currentPin.Expire != 0 && currentPin.Expire < now:
+			logger.Debugf("StateSync: Untracking %s, expired at %s", pCid, time.Unix(currentPin.Expire, 0))
+			c.tracker.Untrack(ctx, pCid)
 		}
 	}
 

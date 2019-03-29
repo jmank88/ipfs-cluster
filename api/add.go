@@ -60,6 +60,7 @@ func DefaultAddParams() *AddParams {
 			ReplicationFactorMax: 0,
 			Name:                 "",
 			ShardSize:            DefaultShardSize,
+			Expire:               0,
 		},
 	}
 }
@@ -110,7 +111,13 @@ func AddParamsFromQuery(query url.Values) (*AddParams, error) {
 		params.HashFun = hashF
 	}
 
-	err := parseBoolParam(query, "recursive", &params.Recursive)
+	var err error
+	params.Expire, err = strconv.ParseInt(query.Get("expire"), 10, 64)
+	if err != nil {
+		return nil, errors.New("parameter expire invalid")
+	}
+
+	err = parseBoolParam(query, "recursive", &params.Recursive)
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +187,7 @@ func (p *AddParams) ToQueryString() string {
 	query.Set("name", p.Name)
 	query.Set("shard", fmt.Sprintf("%t", p.Shard))
 	query.Set("shard-size", fmt.Sprintf("%d", p.ShardSize))
+	query.Set("expire", fmt.Sprintf("%d", p.Expire))
 	query.Set("recursive", fmt.Sprintf("%t", p.Recursive))
 	query.Set("layout", p.Layout)
 	query.Set("chunker", p.Chunker)
@@ -199,9 +207,10 @@ func (p *AddParams) Equals(p2 *AddParams) bool {
 	return p.ReplicationFactorMin == p2.ReplicationFactorMin &&
 		p.ReplicationFactorMax == p2.ReplicationFactorMax &&
 		p.Name == p2.Name &&
-		p.Recursive == p2.Recursive &&
 		p.Shard == p2.Shard &&
 		p.ShardSize == p2.ShardSize &&
+		p.Expire == p2.Expire &&
+		p.Recursive == p2.Recursive &&
 		p.Layout == p2.Layout &&
 		p.Chunker == p2.Chunker &&
 		p.RawLeaves == p2.RawLeaves &&

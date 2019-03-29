@@ -13,7 +13,7 @@ import (
 )
 
 // State is used by the Consensus component to keep track of
-// objects which objects are pinned. This component should be thread safe.
+// which objects are pinned. This component should be thread safe.
 type State interface {
 	// Add adds a pin to the State
 	Add(context.Context, *api.Pin) error
